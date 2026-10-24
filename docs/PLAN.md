@@ -1,149 +1,168 @@
-# Kingsford Meal Planner: Initial Plan (v0.1, draft for verification)
+# Kingsford Meal Planner: Plan v0.2 (verified)
 
-## 1. Brief (from the user's answers)
+> v0.1 was reviewed by 4 Haiku swarms × 3 agents (budget/nutrition, sourcing, app architecture, HelloFresh/logistics). All 12 returned **"sound with changes"**. Every accepted change is folded in below; the change log is in §9.
+
+## 1. Brief
 
 | Constraint | Value |
 |---|---|
-| Location | Botany St area, Kingsford NSW 2032 (next to UNSW Kensington) |
-| Grocery budget | **$150 AUD/week**, groceries only. HelloFresh is paid separately |
-| HelloFresh | 3 recipes/week, 2-person size |
+| Location | Botany St, Kingsford NSW 2032 (next to UNSW Kensington) |
+| Grocery budget | **$150 AUD/week**, groceries only. HelloFresh is paid separately (~$70–80/week for 3×2, to be confirmed) |
+| HelloFresh | 3 recipes/week, 2-person size, chosen from the weekly menu |
 | Eaters | 1 (solo) |
-| Meals covered | Breakfast, lunch, dinner, snacks, 7 days |
+| Meals | Breakfast, lunch, dinner, snacks, 7 days |
 | Diet | No restrictions, **high protein** |
-| Transport | Walking + bus/light rail (L2/L3 Kingsford line, buses to Eastgardens/Randwick/Maroubra) |
-| Cooking | Full kitchen, **quick nightly cooks (20–30 min)**, no long batch sessions |
-| App | Installable offline **phone web app (PWA)** |
-| HelloFresh integration | Undecided, so research the options first |
+| Transport | Walking + bus + **L3 Kingsford light rail** (L2 is the Randwick line) |
+| Cooking | Full kitchen, **≤30 min nightly cooks**, no batch sessions |
+| App | Installable offline phone PWA |
 
-## 2. Weekly framework (the repeating plan)
+## 2. The weekly framework: "Wednesday Shop, Sunday Box"
 
-### 2.1 Meal slots per week (21 main slots + snacks)
+### 2.1 Why this rhythm
 
-| Slot | Count | Source |
+- Woolworths/Coles specials run **Wed → Tue**. Shopping on **Wednesday** catches the new specials (previews go online Monday afternoon, so the plan can be locked Mon/Tue).
+- Home cooking happens **Wed–Sat**, the 4 nights straight after the shop, while groceries are freshest.
+- HelloFresh arrives **Sunday** (AU delivers Sat–Wed; pick the earliest Sunday window for 2032) and covers **Sun–Tue**, the tail of the shop cycle when groceries would be oldest. HF poultry/seafood goes on Sunday.
+- HF menu cutoff for a Sat–Wed delivery is **Tuesday 11:59pm the week before**, so the app reminds you on Monday.
+
+All days are settings; this is the default.
+
+### 2.2 Slot map (14 main meals + 7 breakfasts + snacks)
+
+| Day | Dinner (cook) | Lunch (eat) |
 |---|---|---|
-| HelloFresh dinners | 3 | HF box |
-| HF leftover lunches (2nd portion) | 3 | HF box (free, already paid) |
-| Home-cooked dinners | 4 | Groceries, each cooked as **2 portions** |
-| Home-cooked leftover lunches | 4 | 2nd portion of the dinner the night before |
-| Breakfasts | 7 | Groceries, 2 rotating high-protein options |
-| Snacks | ~14 | Groceries, high-protein staples |
+| Wed | Home A (fresh protein) → ×2 | HF3 leftover from Tue |
+| Thu | Home B (fresh protein) → ×2 | A |
+| Fri | Home C (protein **frozen Wed, thaw Thu night**) → ×2 | B |
+| Sat | Home D (protein **frozen Wed, thaw Fri night**) → ×2 | C |
+| Sun | **HF1** (poultry/seafood first) → ×2 | D |
+| Mon | **HF2** → ×2 | HF1 |
+| Tue | **HF3** → ×2 | HF2 |
 
-Rule: **every dinner is cooked for two, and the second portion is tomorrow's lunch.** That keeps nightly cooking to 20–30 minutes, gives batch-cooking economics without a Sunday session, and handles the HF two-person portions neatly.
+- **Rule: every dinner is cooked as 2 servings. Serving 2 is tomorrow's lunch** (`portion_of` link, never a separate recipe, so nothing is double counted).
+- **Week 1 bootstrap**: the first Wednesday has no leftover lunch. The app adds a "bootstrap lunch" (wrap + tuna) to the first shop.
+- **Perishability ordering**: leafy greens and herb-heavy recipes go Wed/Thu; hardy veg (carrot, cabbage, pumpkin, frozen veg) go Fri/Sat.
+- **Optional mini top-up** (Sun/Mon, ≤ $15 of the $150): milk, fruit, bread.
 
-### 2.2 Weekly rhythm (default; configurable in the app)
+### 2.3 Skips and modes (the plan has to bend)
 
-- **HF delivery day** (configurable, assume Tue). HF dinners are placed on the first nights after delivery, because fresh HF produce degrades fastest.
-- **Main shop**: once a week (default Sun/Mon), with a small top-up on Thu (fresh fruit/milk ≤ $15).
-- **Specials check**: Woolworths/Coles weekly specials change on **Wednesday**. The app flags swaps when a planned protein is on half price.
-- Sample week (HF Tue):
-  - Mon: Home dinner A → Tue lunch A
-  - Tue: HF 1 → Wed lunch HF1
-  - Wed: HF 2 → Thu lunch HF2
-  - Thu: HF 3 → Fri lunch HF3
-  - Fri: Home dinner B → Sat lunch B
-  - Sat: Home dinner C → Sun lunch C
-  - Sun: Home dinner D → Mon lunch D
+- **Skip / eat out** toggle on any slot: removes it from the shop list and budget; if already bought, its protein is marked "freeze" and the plan shifts forward.
+- **Exam week mode**: swaps home dinners for ≤15 min "assembly" meals and leans on the fallback list.
+- **Cheap week mode**: target ≤ $110 (legume/egg-heavy dinners).
+- **10-minute fallback meals** (always in stock): tuna + rice + frozen veg; eggs on toast + Greek yoghurt; wrap + tinned chicken/beans.
 
-### 2.3 Rotation
+### 2.4 Rotation and variety
 
-- **4-week rotating menu (Weeks A–D)** of home dinners: 16 recipes, each ≤ 30 min, high protein (≥ 35 g protein/portion).
-- Each week's recipes share a **core ingredient set** (e.g. one protein bought in bulk is used in 2 recipes) to cut waste.
-- Breakfast and snack templates stay fixed and rotate monthly.
+- **Recipe pool of ~30 home dinners** (≤30 min, freezer-friendly flag, perishability score), tagged by core protein.
+- Each week picks 4 dinners, with **each core ingredient shared by ≤ 2 recipes** and a **pack-fit check** (pack size within ~10% of combined need, otherwise leftovers go to the pantry or freezer with `keep_days`).
+- Suggested 4-week rotation A–D (manual week picker in MVP), with a one-tap swap from the pool.
+- **2 breakfasts/week** chosen from a pool of 6; snacks from a pool of 8.
 
-### 2.4 Nutrition targets (defaults, editable)
+### 2.5 Nutrition targets
 
-- Protein: 1.6–2.0 g/kg body weight. Default target **130 g/day** until the user sets their weight.
-- Energy: maintenance default ~2,400 kcal (editable).
-- Fruit/veg: ≥ 5 serves/day of veg+fruit across the plan.
-- The app sums protein/kcal per day from recipe data, HF nutrition data included.
+- Onboarding asks body weight (+ optional sex/age/height/activity).
+- **Protein = 1.6–2.0 g/kg** (default 1.8; e.g. 75 kg → 135 g/day). **Energy** via Mifflin-St Jeor × activity (shown, not enforced).
+- **Per-slot protein minimums**: breakfast ≥ 25 g, lunch/dinner ≥ 35 g (≥ 30 g for a vegetarian dinner as long as the week averages ≥ 35 g), snacks ≥ 15 g each, 2 snacks/day.
+- Tracked weekly (soft targets, shown as a ledger before the shop): **5 veg + 2 fruit serves/day**, fibre 25–30 g, calcium ~1,000 mg, iron, and **2 oily-fish serves/week** (salmon/sardines; tuna doesn't count).
+- HF nutrition comes from the actual per-serving values on the HF recipe, `null` when unknown (never 0).
 
-### 2.5 Budget envelope ($150/week, starting split; validated during the sourcing rounds)
+### 2.6 Budget envelope ($150/week, based on shelf price; specials are upside)
 
-| Category | $/week |
-|---|---|
-| Proteins (meat, eggs, tuna, legumes, tofu) | 55 |
-| Dairy (Greek yoghurt, milk, cheese) | 25 |
-| Produce (veg, fruit) | 30 |
-| Carbs/staples (rice, oats, pasta, bread, wraps) | 15 |
-| Pantry top-up (oil, spices, sauces; amortised) | 10 |
-| Buffer (specials, top-up, mistakes) | 15 |
+| Line | $/wk | Notes |
+|---|---|---|
+| Meat/fish/tofu/legumes | 60 | ~1.2 kg meat for 8 home portions; breast by default, thigh only on special |
+| Eggs + dairy | 25 | Homebrand Greek yoghurt 1 kg, milk, cheese, eggs |
+| Produce | 30 | Veg + fruit, frozen veg counts here |
+| Carbs | 15 | Rice, oats, pasta, wraps, bread |
+| Pantry staples | 10 | **Flat line**, not subtracted via pantry (avoids double counting) |
+| Buffer | 10 | Top-up / mistakes |
 
-## 3. Sourcing pipeline (subagents, review rounds)
+The app shows **all-in weekly cost** too (groceries + HF box ÷ week) and an **actual-spend** entry (receipt total) next to the planned figure.
 
-### 3.1 Known constraint
+## 3. Shops (to verify in Round 0, locally)
 
-Woolworths/Coles/Aldi websites **can't be reached from the build sandbox** (DNS blocked). Prices therefore come from **web search** (search-engine snapshots of product pages, catalogue/price-comparison sites, OzBargain, Aldi Special Buys pages) plus any reachable aggregator. Every price is stored with provenance:
+Leads from the swarm (search-only, **unverified**):
+- **IGA**, 359–361 Anzac Pde, Kingsford: walk
+- **Coles**, 148 Belmore Rd, Randwick, and **Woolworths**, 73–75 Belmore Rd, Randwick (smaller format): walk/short bus
+- **Westfield Eastgardens** (152 Bunnerong Rd): Coles, Woolworths, **ALDI**: bus
+- Also check: Asian grocers/butchers along Anzac Pde (Kingsford/Kensington), Maroubra Junction.
 
-```json
-{ "item": "chicken-breast", "store": "woolworths", "price": 11.00, "unit": "kg",
-  "pack": "1.3–1.7kg", "source": "<url>", "observed": "2026-10-24",
-  "confidence": "high|medium|low", "notes": "variable weight, $/kg" }
-```
+Strategy hypothesis: **primary = nearest Woolworths/Coles (Wed specials)**, **monthly ALDI run at Eastgardens** for long-life staples (oats, rice, tins, frozen veg).
 
-The app keeps prices current afterwards: you **tap to update a price in the store**, and stale prices (> 30 days) are flagged.
+## 4. Sourcing pipeline
 
-### 3.2 Rounds
+Full protocol: `docs/SOURCING.md`. Summary:
 
-1. **Round 0, store mapping (1 agent)**: which supermarkets/grocers are reachable by walking or bus from Botany St Kingsford (Woolworths/Coles/Aldi/IGA/Asian grocers/butchers), with address, travel mode/time and hours.
-2. **Round 1, price sourcing (≈4 parallel agents)**, split by category (proteins, dairy+eggs, produce, staples/pantry) × candidate stores. Output: the shared price schema above.
-3. **Round 2, independent verification (≈4 agents, different from Round 1)**: re-source each item without seeing Round 1's numbers, then diff. Items differing > 15% are flagged.
-4. **Round 3, adjudication (1 agent)**: resolve flagged items, set the final price + confidence.
-5. **Meal evaluation (2 agents)**: one designs/costs recipes against the final prices, one independently checks cost, protein, cook time, waste overlap and the budget total. Iterate until the week is ≤ $150 with ≥ target protein.
+- **Round 0** store mapping → `data/stores.json`
+- **Round 1** sourcing by category (parallel `price-sourcer` agents) → `data/sourcing/round1/*.json`
+- **Round 2** blind re-sourcing by different agents, which **must cite a different domain** where possible → `round2/`
+- **Diff**: outcomes `agree | disagree | not_found | spec_mismatch`. Flag when unit price differs > 15% **or** budget impact > $1/week
+- **Round 3** adjudication: unresolved → **take the higher price**, confidence low
+- **Meal design + evaluation** loop until the week is ≤ $150 at shelf price and meets protein minimums
+- Every price has a **verbatim quote**; the verifier confirms it. Confidence: **high** = first-party page ≤ 7 days old with unit price consistent; **medium** = aggregator or search snippet; **low** = everything else
 
-## 4. HelloFresh integration: options to research
+When run **locally**, first-party sites (woolworths.com.au etc.) should be reachable. That's the main reason the user is continuing this on their own machine.
 
-HelloFresh has **no public API**. Candidates:
+## 5. HelloFresh
 
-| Option | How | Pros | Cons |
-|---|---|---|---|
-| A. Gmail import | Parse HF AU "your menu"/order-confirmation emails via the attached Gmail connector (by Claude, at planning time) | Automatic, no ToS issue | Only works through Claude, not in the phone app itself; email content may only have recipe names |
-| B. Recipe page JSON-LD | hellofresh.com.au recipe pages embed schema.org `Recipe` (ingredients, nutrition) | Rich data | CORS stops the PWA fetching directly |
-| C. Bookmarklet / share | A bookmarklet run *on* hellofresh.com.au extracts the JSON-LD and opens the app with it in the URL hash | Works in a phone browser, no server | Mobile bookmarklets are fiddly |
-| D. Unofficial API (gw.hellofresh.com) | Token-based internal API | Full menu | ToS risk, brittle, needs auth. **Avoid** |
-| E. Cached library + manual pick | Ship a small library of common HF AU recipes; user picks the 3 each week | Simple, offline | Manual; library goes stale |
-| F. Paste text | Paste ingredient list / recipe card text, parsed heuristically | Universal fallback | Parsing errors |
+Full research: `docs/HELLOFRESH.md`. There is **no public API**. MVP: **paste recipe text/URL → parser**, plus a **small cached library** of picked recipes. Next: bookmarklet run inside the installed app's context (iOS storage caveat). Claude-run helper: `recipe-scrapers` / live-page JSON-LD check, run locally. Gmail import is weak (AU evidence suggests emails/SMS don't list recipes), so verify against the user's real inbox before building.
 
-Research agent to determine: HF AU email formats, JSON-LD availability, URL structure, menu-selection deadlines, whether HF recipe cards include nutrition. **Recommendation pending research**: likely C + F in-app, A as a Claude-run weekly helper, E as fallback.
+## 6. App architecture
 
-## 5. App architecture
+- **Static PWA, no build step**: `app/index.html`, ES modules, CSS, `sw.js`, `manifest.webmanifest`. **Relative URLs only** (GitHub Pages subpath), SW scope `./`.
+- **Storage**: user state in **IndexedDB** (via a tiny wrapper), `navigator.storage.persist()` best-effort. **Backup is the real safety net**: weekly "export backup" nudge through the Web Share API (file → Files/Drive), and schema-validated import with a preview.
+- **iOS**: the home-screen app and Safari have separate storage, so all imports happen inside the installed app. Settings shows "install first" guidance.
+- **Service worker**: app shell precached with a versioned cache name; **`data/*.json` network-first** with cache fallback; Settings shows the data version; "update available" banner.
+- **Data**: `data/*.json` with `schemaVersion` and stable IDs. User overrides are stored as `{id, field, value, setAt, baseVersion}` and merged at runtime (shipped data is never mutated). `migrate.js` upgrades old state.
+- **Engine** (`src/engine/`, pure, `node --test`, integer cents, `today` + catalogue passed in):
+  - `units.js`: normalise recipe lines to g/ml/each via the ingredient master (`each_g`, `density`)
+  - `plan.js`: week from rhythm settings + rotation + HF picks + skips; perishability ordering
+  - `shopping.js`: **chronological** demand per shop window → subtract pantry → `ceil(net/pack)` → leftovers to pantry with `keep_days`; HF meals excluded (`cost_model: "box"`)
+  - `cost.js`: price precedence **user override (store-scoped) > adjudicated final > R2-agreed > single-source (low) > category fallback (flagged) > unpriced (counted, never $0)**; specials expire via `valid_to`
+  - `nutrition.js`: home recipes from ingredient `nutrition_per_100g` (AUSNUT/NUTTAB) × qty ÷ servings; HF from per-serving data
+  - `hellofresh.js`: paste/JSON-LD parser
+- Invariants tested: bought ≥ needed; leftover = bought − needed; lunches never add demand; unpriced never counted as $0.
 
-- **Static PWA**, no build step: `index.html`, ES modules, CSS; service worker for offline; installable manifest. Hosted on **GitHub Pages** from this repo.
-- **Data**: `data/*.json` shipped with the app (stores, prices, recipes, templates). User state (settings, week plan, pantry, price overrides, ticks) in `localStorage` with export/import JSON backup.
-- **Engine** (`src/engine/*.js`, pure functions, unit-tested with `node --test`):
-  - `plan.js`: build the week from template + HF picks + rotation week
-  - `shopping.js`: aggregate ingredients → pack-size rounding → pantry subtraction → per-store list
-  - `cost.js`: price lookup (override > final > fallback), totals vs budget
-  - `nutrition.js`: protein/kcal per day
-  - `hellofresh.js`: JSON-LD/paste parsing
-- **Views**: This Week · Shop · Recipes · Pantry · Prices · HelloFresh · Settings.
-
-## 6. Feature brainstorm (prioritised)
+## 7. Features
 
 **MVP**
-1. Weekly plan view with slots (HF / home / leftovers), drag-free "swap recipe"
-2. Auto shopping list grouped by store and aisle, pack-size aware, tick-off offline
-3. Budget meter (planned vs $150) and protein-per-day meter
-4. HelloFresh import (bookmarklet + paste + library)
-5. Price book with provenance, staleness flags and tap-to-update in-store
-6. Pantry tracker (staples on hand get subtracted from the list)
-7. Rotation weeks A–D, auto-advancing
+1. **Today screen** (default): tonight's dinner with steps + timer, tomorrow's lunch, the thaw reminder, next shop
+2. Week view: slots, one-tap swap from the pool, **skip/eat-out** toggle
+3. **Shop mode**: list grouped by store/aisle, pack-aware, tick-off offline, **running trolley total vs $150**
+4. **One-tap "Start new week"**: rolls forward, keeps the rotation, resets ticks, runs the "what's left?" pantry prompt (10-second tick list)
+5. Budget meter (planned / actual receipt / all-in incl. HF) + protein ledger
+6. HelloFresh: paste import + cached library
+7. Prices: current price, "last updated", tap-to-update in store (provenance stays in the data files, not the UI)
+8. Exam-week mode + 10-minute fallback meals
+9. Backup export/import + weekly nudge
+10. Reminders shown in-app: HF cutoff (Mon), thaw (Thu/Fri night), shop (Wed)
 
 **Next**
-8. Leftovers/fridge tracker with "use by" nudges (HF produce first)
-9. Specials radar: mark items on special this week → suggests swaps
-10. Actual-spend log (enter receipt total) → weekly/monthly spend chart
-11. "Cheap week" mode (≤ $110) and "Exam week" mode (minimal cooking)
-12. HF value check: HF $/serve vs home $/serve, a hint for which HF weeks to skip
-13. Google Calendar export (.ics) of cook nights and the shop day
-14. Backup/export and import JSON
+- Specials radar (mark items on special → suggested swaps)
+- Spend history chart; HF value check (HF $/serve vs home $/serve, which weeks to skip HF)
+- `.ics` calendar export (shop day, HF cutoff, thaw reminders), or Google Calendar via Claude's connector
+- Bookmarklet HF import; fridge/leftover tracker with use-by nudges
+- Cheap-week mode auto-generator
 
-## 7. Verification and review
+## 8. Verification and review
 
-- **Plan verification**: 4 small Haiku swarms (3 agents each) review this plan through different lenses (budget/nutrition realism, sourcing methodology, app architecture/features, HelloFresh/local logistics). Findings are consolidated into plan v0.2.
-- **Independent review after build**: separate agents review (a) code correctness/tests, (b) mobile UX/accessibility, (c) framework realism against the final price data.
+- ✅ Plan verification: 4 Haiku swarms × 3 (done, v0.1 → v0.2)
+- ⏳ Sourcing rounds 0–3 + meal evaluation (local session, `docs/SOURCING.md`)
+- ⏳ App build, then **independent reviews**: `app-reviewer` agents for (a) engine correctness/tests, (b) mobile UX + accessibility, (c) framework realism vs final prices; plus a final Haiku swarm sanity pass
 
-## 8. Deliverables
+## 9. Change log v0.1 → v0.2 (from swarm findings)
 
-- `docs/PLAN.md` (this), `docs/FRAMEWORK.md` (the weekly framework, human-readable), `docs/HELLOFRESH.md` (integration research), `docs/SOURCING.md` (price methodology + round results)
-- `data/` JSON, `app/` PWA, `tests/`
-- README with how to install on your phone
+| Finding | Change |
+|---|---|
+| Sunday shop → raw meat Fri/Sat too old; Wed specials missed | "Wednesday Shop, Sunday Box" rhythm; freeze-on-purchase + thaw reminders |
+| Protein $55 too tight; thigh pricier than breast | Proteins $60, buffer $10; breast default |
+| Flat 130 g / 2,400 kcal defaults | Weight-based protein, Mifflin-St Jeor energy |
+| Missing nutrients, wrong veg guidance | 5 veg + 2 fruit, fibre, calcium, iron, oily fish |
+| Lunch double-count risk; week-1 gap | `portion_of` links; bootstrap lunch |
+| Price schema not computable; no ingredient master | Structured price schema; `ingredients.json` master; integer cents |
+| Single snapshot ≠ independent verification | Different-domain rule, verbatim quotes, confidence rubric, $1/wk threshold, take-higher on ties |
+| iOS eviction + split storage; stale SW data | IndexedDB + backup nudge; network-first data; install-first imports |
+| MVP too big, missing the weekly loop | Today screen, skip toggle, start-new-week, trolley total; provenance UI cut |
+| Boredom: 16 recipes | Pool of ~30 + swap; 2 breakfasts/week |
+| HF facts | Cutoff Tue 11:59pm; 3 of a large menu; Gmail import weak; JSON-LD unverified; `recipe-scrapers` lead |
+| L2/L3 | Only L3 serves Kingsford |

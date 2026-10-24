@@ -1,0 +1,14 @@
+{
+  "name": "kingsford-meal-planner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Weekly meal framework + offline PWA for a solo student in Kingsford NSW",
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.js\"",
+    "validate": "node scripts/validate-data.mjs",
+    "diff-rounds": "node scripts/diff-rounds.mjs",
+    "fetch:woolworths": "node scripts/fetch-woolworths.mjs"
+  },
+  "engines": { "node": ">=20" }
+}

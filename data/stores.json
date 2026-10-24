@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "notes": "Round 0 leads from plan-verifier search. ALL unverified until Round 0 confirms address, hours and travel time from Botany St Kingsford.",
+  "stores": [
+    {
+      "id": "iga-kingsford",
+      "name": "IGA Kingsford",
+      "chain": "iga",
+      "address": "359-361 Anzac Pde, Kingsford NSW 2032",
+      "travel": null,
+      "verified": false,
+      "source_url": "https://intercom.help/switchliving/id/articles/9732670-tempat-membeli-bahan-makanan-dari-the-switch-kensington",
+      "notes": "single secondary source"
+    },
+    {
+      "id": "coles-randwick",
+      "name": "Coles Randwick",
+      "chain": "coles",
+      "address": "148 Belmore Rd, Randwick NSW 2031",
+      "travel": null,
+      "verified": false,
+      "source_url": "https://intercom.help/switchliving/id/articles/9732670-tempat-membeli-bahan-makanan-dari-the-switch-kensington",
+      "notes": "single secondary source"
+    },
+    {
+      "id": "woolworths-randwick",
+      "name": "Woolworths Randwick",
+      "chain": "woolworths",
+      "address": "73-75 Belmore Rd, Randwick NSW 2031",
+      "travel": null,
+      "verified": false,
+      "source_url": "https://intercom.help/switchliving/id/articles/9732670-tempat-membeli-bahan-makanan-dari-the-switch-kensington",
+      "notes": "single secondary source; possibly smaller format"
+    },
+    {
+      "id": "coles-eastgardens",
+      "name": "Coles Eastgardens",
+      "chain": "coles",
+      "address": "Westfield Eastgardens, 152 Bunnerong Rd, Eastgardens NSW 2036",
+      "travel": null,
+      "verified": false,
+      "source_url": "https://scentregroup.com/our-customers/westfield-destinations/westfield-eastgardens",
+      "notes": "bus"
+    },
+    {
+      "id": "woolworths-eastgardens",
+      "name": "Woolworths Eastgardens",
+      "chain": "woolworths",
+      "address": "Westfield Eastgardens, 152 Bunnerong Rd, Eastgardens NSW 2036",
+      "travel": null,
+      "verified": false,
+      "source_url": "https://scentregroup.com/our-customers/westfield-destinations/westfield-eastgardens",
+      "notes": "bus"
+    },
+    {
+      "id": "aldi-eastgardens",
+      "name": "ALDI Eastgardens",
+      "chain": "aldi",
+      "address": "Westfield Eastgardens, 152 Bunnerong Rd, Eastgardens NSW 2036",
+      "travel": null,
+      "verified": false,
+      "source_url": "https://scentregroup.com/our-customers/westfield-destinations/westfield-eastgardens",
+      "notes": "bus; candidate monthly staples run"
+    }
+  ]
+}

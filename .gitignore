@@ -1,0 +1,4 @@
+node_modules/
+data/sourcing/raw/
+.DS_Store
+*.log
