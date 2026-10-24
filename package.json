@@ -8,6 +8,7 @@
     "test": "node --test \"tests/**/*.test.js\"",
     "validate": "node scripts/validate-data.mjs",
     "diff-rounds": "node scripts/diff-rounds.mjs",
+    "build-prices": "node scripts/build-prices.mjs",
     "fetch:woolworths": "node scripts/fetch-woolworths.mjs"
   },
   "engines": { "node": ">=20" }

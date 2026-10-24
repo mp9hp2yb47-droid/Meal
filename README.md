@@ -7,6 +7,7 @@ The framework is **"Wednesday Shop, Sunday Box"**: shop on Wednesday when the sp
 - Plan (verified): [`docs/PLAN.md`](docs/PLAN.md)
 - Next steps / status: [`docs/HANDOFF.md`](docs/HANDOFF.md)
 - Price sourcing protocol: [`docs/SOURCING.md`](docs/SOURCING.md)
+- Data schemas: [`docs/DATA.md`](docs/DATA.md)
 - HelloFresh integration: [`docs/HELLOFRESH.md`](docs/HELLOFRESH.md)
 
 ```bash

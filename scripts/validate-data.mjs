@@ -1,37 +1,64 @@
 #!/usr/bin/env node
-// Validate data/*.json and every sourcing round file. Exit 1 on any error.
-// Usage: node scripts/validate-data.mjs [--today YYYY-MM-DD]
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { validateIngredients, validateStores, validatePriceRecords, validateRoundFile } from '../src/engine/validate.js';
+// Validate data files. Exit 1 on any error.
+//   node scripts/validate-data.mjs                     # everything
+//   node scripts/validate-data.mjs --file data/sourcing/round1/protein.json   # one round file only
+//   node scripts/validate-data.mjs --snapshots         # strict: every snapshot must exist and contain quote + price
+//   node scripts/validate-data.mjs --today 2026-10-28
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { abs, readJson, sydneyToday, argValue, roundFiles } from './lib.mjs';
+import { checkSnapshot } from '../src/engine/prices.js';
+import {
+  validateIngredients, validateStores, validatePriceRecords, validateRoundFile, validateRecipes, validateHelloFresh,
+} from '../src/engine/validate.js';
 
-const root = new URL('..', import.meta.url).pathname;
-const read = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
-const argToday = process.argv.indexOf('--today');
-const today = argToday > -1 ? process.argv[argToday + 1] : new Date().toISOString().slice(0, 10);
+const today = argValue('--today') ?? sydneyToday();
+const only = argValue('--file');
+const strictSnapshots = process.argv.includes('--snapshots');
 
-const ingredientsDoc = read('data/ingredients.json');
-const storesDoc = read('data/stores.json');
-const pricesDoc = read('data/prices.json');
+const ingredientsDoc = readJson('data/ingredients.json');
+const storesDoc = readJson('data/stores.json');
 const ctx = { ingredients: ingredientsDoc.ingredients, stores: storesDoc.stores };
+const errors = [];
+let missingSnapshots = 0;
 
-const errors = [
-  ...validateIngredients(ingredientsDoc),
-  ...validateStores(storesDoc),
-  ...validatePriceRecords(pricesDoc.prices, { ...ctx, today, label: 'prices.json' }),
-];
-let roundFiles = 0;
-for (const round of ['round1', 'round2', 'round3']) {
-  const dir = join(root, 'data/sourcing', round);
-  if (!existsSync(dir)) continue;
-  for (const f of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
-    roundFiles++;
-    errors.push(...validateRoundFile(read(`data/sourcing/${round}/${f}`), ctx).map((e) => `${round}/${f}: ${e}`));
+function snapshotChecks(records, label) {
+  for (const r of records) {
+    if (!r.snapshot) continue;
+    const at = `${label} ${r.ingredient_id}@${r.store_id}`;
+    if (!existsSync(abs(r.snapshot))) {
+      missingSnapshots++;
+      if (strictSnapshots) errors.push(`${at}: snapshot missing: ${r.snapshot}`);
+      continue;
+    }
+    errors.push(...checkSnapshot(r, readFileSync(abs(r.snapshot), 'utf8')).map((p) => `${at}: ${p} (${r.snapshot})`));
   }
 }
+
+let files = roundFiles('round1').concat(roundFiles('round2'), roundFiles('round3'));
+if (only) {
+  files = files.filter((f) => f.path === only.replace(/^\.\//, ''));
+  if (!files.length) errors.push(`--file ${only}: not a round file`);
+} else {
+  errors.push(...validateIngredients(ingredientsDoc), ...validateStores(storesDoc));
+  const prices = readJson('data/prices.json').prices;
+  errors.push(...validatePriceRecords(prices, { ...ctx, today, label: 'prices.json', allowedRounds: [2, 3] }));
+  snapshotChecks(prices, 'prices.json');
+  if (existsSync(abs('data/recipes.json'))) errors.push(...validateRecipes(readJson('data/recipes.json'), ctx));
+  if (existsSync(abs('data/hellofresh'))) {
+    for (const f of readdirSync(abs('data/hellofresh')).filter((f) => f.endsWith('.json'))) {
+      errors.push(...validateHelloFresh(readJson(`data/hellofresh/${f}`)).map((e) => `${f}: ${e}`));
+    }
+  }
+}
+for (const { path, doc } of files) {
+  errors.push(...validateRoundFile(doc, ctx).map((e) => `${path}: ${e}`));
+  snapshotChecks(doc.records ?? [], path);
+}
+
 if (errors.length) {
   console.error(errors.join('\n'));
   console.error(`\n${errors.length} error(s)`);
   process.exit(1);
 }
-console.log(`OK: ${ctx.ingredients.length} ingredients, ${ctx.stores.length} stores, ${pricesDoc.prices.length} final prices, ${roundFiles} round files`);
+const warn = missingSnapshots ? ` (warning: ${missingSnapshots} snapshot file(s) not on this machine; run with --snapshots where they exist)` : '';
+console.log(`OK: ${only ?? `${ctx.ingredients.length} ingredients, ${ctx.stores.length} stores, ${files.length} round files`}${warn}`);

@@ -7,29 +7,33 @@
 // UNTESTED from the cloud sandbox (woolworths.com.au is unreachable there).
 // The endpoint and field names are those used by the woolworths.com.au web app
 // and community tools; if they changed, the script says so and you fall back to
-// WebFetch / Claude in Chrome on product pages (see docs/SOURCING.md).
+// curl'd product pages (see docs/SOURCING.md).
 //
 // Personal use only: one query at a time with a delay, no parallelism.
 //
 // Usage:
 //   node scripts/fetch-woolworths.mjs "chicken breast" "greek yoghurt"
 //   node scripts/fetch-woolworths.mjs --all            # one query per ingredient name
-//   node scripts/fetch-woolworths.mjs --all --out data/sourcing/raw/woolworths.json
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+//   node scripts/fetch-woolworths.mjs --all --out data/sourcing/snapshots/shared/ww.json
+//
+// The output file doubles as a snapshot: a record sourced from it sets
+// "snapshot" to this path and quotes the candidate's cup_string verbatim.
+// "Works" = at least 80% of --all queries return >= 1 candidate.
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { abs, readJson, sydneyToday } from './lib.mjs';
 
 const BASE = 'https://www.woolworths.com.au';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
 const DELAY_MS = 1500;
-const root = new URL('..', import.meta.url).pathname;
 
 const args = process.argv.slice(2);
 const outIdx = args.indexOf('--out');
-const today = new Date().toISOString().slice(0, 10);
-const outPath = outIdx > -1 ? args[outIdx + 1] : join('data/sourcing/raw', `woolworths-${today}.json`);
+const today = sydneyToday();
+const outPath = outIdx > -1 ? args[outIdx + 1] : `data/sourcing/snapshots/shared/woolworths-search-${today}.json`;
 let queries = args.filter((a, i) => !a.startsWith('--') && (outIdx < 0 || i !== outIdx + 1));
 if (args.includes('--all')) {
-  const { ingredients } = JSON.parse(readFileSync(join(root, 'data/ingredients.json'), 'utf8'));
+  const { ingredients } = readJson('data/ingredients.json');
   queries = ingredients.map((i) => ({ ingredient_id: i.id, term: i.name.replace(/\s*\(.*?\)|\s+\d.*$/g, '').trim() }));
 } else {
   queries = queries.map((term) => ({ ingredient_id: null, term }));
@@ -93,11 +97,11 @@ try {
     await sleep(DELAY_MS);
   }
 } catch (e) {
-  console.error(`Could not reach Woolworths (${e.message ?? e}). Fall back to WebFetch / browser per docs/SOURCING.md.`);
+  console.error(`Could not reach Woolworths (${e.message ?? e}). Sourcers fall back to curl'd product pages (docs/SOURCING.md).`);
   process.exit(1);
 }
 
-const out = { schemaVersion: 1, source: 'woolworths-web-search', channel: 'online', fetched: today, note: 'Online price; may differ from in-store. Raw candidates for price-sourcer, not price records.', results };
-mkdirSync(dirname(join(root, outPath)), { recursive: true });
-writeFileSync(join(root, outPath), JSON.stringify(out, null, 2) + '\n');
+const out = { schemaVersion: 1, source: 'woolworths-web-search', channel: 'online', fetched: today, note: 'Online price; may differ from in-store. Raw candidates for Round 1 price-sourcers only (Round 2 must not use this file).', results };
+mkdirSync(dirname(abs(outPath)), { recursive: true });
+writeFileSync(abs(outPath), JSON.stringify(out, null, 2) + '\n');
 console.error(`wrote ${outPath}`);

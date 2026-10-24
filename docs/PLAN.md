@@ -113,12 +113,13 @@ Full research: `docs/HELLOFRESH.md`. There is **no public API**. MVP: **paste re
 - **Storage**: user state in **IndexedDB** (via a tiny wrapper), `navigator.storage.persist()` best-effort. **Backup is the real safety net**: weekly "export backup" nudge through the Web Share API (file → Files/Drive), and schema-validated import with a preview.
 - **iOS**: the home-screen app and Safari have separate storage, so all imports happen inside the installed app. Settings shows "install first" guidance.
 - **Service worker**: app shell precached with a versioned cache name; **`data/*.json` network-first** with cache fallback; Settings shows the data version; "update available" banner.
-- **Data**: `data/*.json` with `schemaVersion` and stable IDs. User overrides are stored as `{id, field, value, setAt, baseVersion}` and merged at runtime (shipped data is never mutated). `migrate.js` upgrades old state.
+- **Data**: `data/*.json` with `schemaVersion` and stable IDs (schemas in `docs/DATA.md`, `docs/SOURCING.md`). Price overrides are price records (`channel: "instore"`, `setAt`, `baseVersion`). Other user edits are `{id, field, value, setAt, baseVersion}`. Everything is merged at runtime (shipped data is never mutated). `migrate.js` upgrades old state.
+- **Layout**: the repo root is served as-is (GitHub Pages or `python3 -m http.server`). The app lives at `app/` and loads `../data/*.json` and `../src/engine/*.js`, so there is no copy or build step.
 - **Engine** (`src/engine/`, pure, `node --test`, integer cents, `today` + catalogue passed in):
   - `units.js`: normalise recipe lines to g/ml/each via the ingredient master (`each_g`, `density`)
   - `plan.js`: week from rhythm settings + rotation + HF picks + skips; perishability ordering
   - `shopping.js`: **chronological** demand per shop window → subtract pantry → `ceil(net/pack)` → leftovers to pantry with `keep_days`; HF meals excluded (`cost_model: "box"`)
-  - `cost.js`: price precedence **user override (store-scoped) > adjudicated final > R2-agreed > single-source (low) > category fallback (flagged) > unpriced (counted, never $0)**; specials expire via `valid_to`
+  - `cost.js`: uses `selectPrice` in `prices.js` with precedence **user override (latest per store) > adjudicated (round 3) > agreed (round 2) > single-source (round 1, only after a monthly refresh) > unpriced (counted, never $0)**, cheapest within a tier. **Shelf prices only** for the budget; live specials (`valid_to ≥ today`) only for the specials radar
   - `nutrition.js`: home recipes from ingredient `nutrition_per_100g` (AUSNUT/NUTTAB) × qty ÷ servings; HF from per-serving data
   - `hellofresh.js`: paste/JSON-LD parser
 - Invariants tested: bought ≥ needed; leftover = bought − needed; lunches never add demand; unpriced never counted as $0.

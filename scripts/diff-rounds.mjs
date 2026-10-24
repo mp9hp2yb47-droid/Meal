@@ -1,21 +1,19 @@
 #!/usr/bin/env node
-// Diff Round 1 vs Round 2 sourcing output and write data/sourcing/diff.json.
-// Rows with outcome disagree | not_found | spec_mismatch, or sameDomain=true,
-// go to the Round 3 adjudicator.
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { diffRounds } from '../src/engine/prices.js';
+// Diff Round 1 vs Round 2 over the ingredient x store grid and write
+// data/sourcing/diff.json. Rows where needsAdjudication() is true go to Round 3.
+// The store grid is every store_id that appears in any Round 1/2 record or not_found entry.
+import { writeFileSync } from 'node:fs';
+import { abs, readJson, roundFiles } from './lib.mjs';
+import { diffRounds, needsAdjudication } from '../src/engine/prices.js';
 
-const root = new URL('..', import.meta.url).pathname;
-const read = (p) => JSON.parse(readFileSync(p, 'utf8'));
-const records = (round) => {
-  const dir = join(root, 'data/sourcing', round);
-  return readdirSync(dir).filter((f) => f.endsWith('.json')).flatMap((f) => read(join(dir, f)).records ?? []);
-};
-const { ingredients } = read(join(root, 'data/ingredients.json'));
-const rows = diffRounds(records('round1'), records('round2'), ingredients);
-const needsAdjudication = rows.filter((r) => r.outcome !== 'agree' || r.sameDomain);
-writeFileSync(join(root, 'data/sourcing/diff.json'), JSON.stringify({ schemaVersion: 1, rows }, null, 2) + '\n');
+const r1 = roundFiles('round1').map((f) => f.doc);
+const r2 = roundFiles('round2').map((f) => f.doc);
+const records = (docs) => docs.flatMap((d) => d.records ?? []);
+const storeIds = [...new Set([...r1, ...r2].flatMap((d) => [...(d.records ?? []), ...(d.not_found ?? [])].map((x) => x.store_id)))].sort();
+const { ingredients } = readJson('data/ingredients.json');
+const rows = diffRounds(records(r1), records(r2), ingredients, storeIds);
+writeFileSync(abs('data/sourcing/diff.json'), JSON.stringify({ schemaVersion: 1, storeIds, rows }, null, 2) + '\n');
 const count = (o) => rows.filter((r) => r.outcome === o).length;
-console.log(`rows=${rows.length} agree=${count('agree')} disagree=${count('disagree')} not_found=${count('not_found')} spec_mismatch=${count('spec_mismatch')} sameDomain=${rows.filter((r) => r.sameDomain).length}`);
-console.log(`→ ${needsAdjudication.length} row(s) need Round 3 adjudication (see data/sourcing/diff.json)`);
+console.log(`stores=${storeIds.join(',')}`);
+console.log(`rows=${rows.length} agree=${count('agree')} disagree=${count('disagree')} not_found=${count('not_found')} missing=${count('missing')} spec_mismatch=${count('spec_mismatch')} sameDomain=${rows.filter((r) => r.sameDomain).length} copied=${rows.filter((r) => r.copied).length}`);
+console.log(`→ ${rows.filter(needsAdjudication).length} row(s) need Round 3 adjudication (data/sourcing/diff.json)`);
