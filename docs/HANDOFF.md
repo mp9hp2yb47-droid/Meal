@@ -10,8 +10,8 @@ _Last updated 2026-10-24 by the cloud session. The next session runs **locally o
 | Plan v0.1 → verified by 4 Haiku swarms × 3 → **Plan v0.2** | ✅ `docs/PLAN.md` (§9 change log) |
 | Handoff package reviewed by a 3-agent Haiku swarm, findings fixed | ✅ |
 | Data model + schemas | ✅ `docs/DATA.md`, `docs/SOURCING.md` |
-| Price engine: unit normalisation, diff over the full grid, conservative resolution, final-price build, selection precedence (shelf-only budget), snapshot quote check | ✅ `src/engine/prices.js`, 24 tests |
-| Validators for ingredients, stores, round files, prices, recipes, HelloFresh | ✅ `src/engine/validate.js`, `npm run validate` |
+| Price engine: unit normalisation, diff over the full grid, conservative resolution, final-price build, selection precedence (shelf-only budget), snapshot quote check | ✅ `src/engine/prices.js` + `tests/` (25 tests total) |
+| Validators for ingredients, stores, round files, prices, recipes, sample week, HelloFresh | ✅ `src/engine/validate.js`, `npm run validate` |
 | Pipeline scripts | ✅ `validate`, `diff-rounds`, `build-prices` (end-to-end smoke-tested on fixtures); `fetch:woolworths` ⚠️ **untested** (no network in the cloud) |
 | Ingredient master (42 items with specs) + store leads (6, unverified) | ✅ `data/` |
 | HelloFresh options research (search-only) | ✅ `docs/HELLOFRESH.md`, checklist open |
@@ -32,7 +32,7 @@ _Last updated 2026-10-24 by the cloud session. The next session runs **locally o
 ```bash
 git checkout claude/student-meal-planning-iweo8i && git pull
 node -v                      # >= 20
-npm test && npm run validate # 24 tests pass, validate OK
+npm test && npm run validate # all tests pass, validate OK
 python3 -m venv .venv && . .venv/bin/activate && pip install recipe-scrapers   # HelloFresh check
 npx -y playwright@1.47.2 install chromium                                      # for the ux review later
 for u in https://www.woolworths.com.au/ https://www.coles.com.au/ https://www.aldi.com.au/ https://www.hellofresh.com.au/recipes https://www.grocerize.com.au/; do echo "$u $(curl -s -o /dev/null -w '%{http_code}' -A 'Mozilla/5.0' $u)"; done
@@ -78,12 +78,14 @@ Optional: a Haiku swarm (3 × `plan-verifier`) on FRAMEWORK.md (lenses: student 
 ### 7. Build the PWA (PLAN.md §6–7, MVP list only)
 Layout: the repo root is served as-is; the app at `app/` imports `../src/engine/*.js` and fetches `../data/*.json`. **No build step, no copying.**
 ```
-app/index.html, app/app.js, app/styles.css, app/sw.js, app/manifest.webmanifest, app/icons/
+sw.js                       ← service worker at the REPO ROOT (scope ./ covers app/, data/, src/)
+manifest.webmanifest        ← repo root; start_url "./app/", scope "./"
+app/index.html, app/app.js, app/styles.css, app/icons/
 app/views/{today,week,shop,recipes,prices,hellofresh,settings}.js
 app/store/{db.js,backup.js,migrate.js}
 src/engine/{units,plan,shopping,cost,nutrition,hellofresh}.js  (+ tests/*.test.js for each)
 ```
-Engine first, with tests for the PLAN.md §6 invariants. Then the views. The service worker's scope must cover `../data/` and `../src/`: register `sw.js` from the repo root (`/sw.js`, scope `./`), or put the SW at the root. Decide and document it in `docs/DATA.md`.
+Engine first, with tests for the PLAN.md §6 invariants. Then the views. **Decided:** the service worker and manifest live at the repo root so their scope covers `app/`, `data/` and `src/`. `app/app.js` registers it with `navigator.serviceWorker.register('../sw.js', { scope: '../' })`. App shell is cache-first with a versioned cache, `data/*.json` is network-first (PLAN.md §6).
 
 ### 8. Independent review
 Spawn 3 `app-reviewer` in parallel (lenses: `engine`, `ux`, `framework`) plus a final Haiku swarm (3 × `plan-verifier`, lens: "would a student actually use this every week?"). **After each review, `git status` must show only `docs/reviews/*`**: revert anything else. Fix the high/medium findings, then re-run the reviewer for any high-severity lens.
@@ -99,3 +101,4 @@ Enable GitHub Pages (Settings → Pages → this branch, root). Then, on the use
 - Lunch = the 2nd serving of the previous dinner; it never adds demand.
 - Only the **L3** light rail serves Kingsford.
 - Dates are Australia/Sydney (`scripts/lib.mjs` → `sydneyToday`).
+- Claude in Chrome (if installed) is available to the **main session only**. Subagents use curl. When a site blocks curl, the main session captures the page text with Chrome into `data/sourcing/snapshots/` and the agent re-runs.

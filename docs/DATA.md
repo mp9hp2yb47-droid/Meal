@@ -38,7 +38,7 @@ Price records and round files are in `docs/SOURCING.md`; stores (Round 0) are th
   "source": "original | URL" } ] }
 ```
 
-## `data/sample-week.json` (meal-designer output, the reference week)
+## `data/sample-week.json` (meal-designer output, the reference week): ✔ 7 dinners, one per day, each a known dinner `recipe_id` or `hf_placeholder.protein_g`; breakfasts/snacks are known recipes of that kind; `costing.unpriced` array
 
 ```json
 { "schemaVersion": 1, "rhythm": { "shop_day": "wed", "hf_delivery_day": "sun" },
@@ -67,3 +67,7 @@ See `docs/HELLOFRESH.md`. ✔ `id` starts with `hf-`, `source: "hellofresh"`, `c
   "price_overrides": [ /* price records with channel "instore", setAt, baseVersion */ ],
   "history": [ { "week_start": "2026-10-21", "planned_cents": 14210, "actual_cents": 14890 } ] }
 ```
+
+## Hosting layout
+
+The repo root is served as-is. `sw.js` and `manifest.webmanifest` sit at the root (scope `./`), and the app is at `app/`. It imports `../src/engine/*.js` and fetches `../data/*.json`. There is no build or copy step.

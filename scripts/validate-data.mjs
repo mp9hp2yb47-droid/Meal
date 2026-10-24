@@ -8,7 +8,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { abs, readJson, sydneyToday, argValue, roundFiles } from './lib.mjs';
 import { checkSnapshot } from '../src/engine/prices.js';
 import {
-  validateIngredients, validateStores, validatePriceRecords, validateRoundFile, validateRecipes, validateHelloFresh,
+  validateIngredients, validateStores, validatePriceRecords, validateRoundFile, validateRecipes, validateHelloFresh, validateSampleWeek,
 } from '../src/engine/validate.js';
 
 const today = argValue('--today') ?? sydneyToday();
@@ -44,6 +44,10 @@ if (only) {
   errors.push(...validatePriceRecords(prices, { ...ctx, today, label: 'prices.json', allowedRounds: [2, 3] }));
   snapshotChecks(prices, 'prices.json');
   if (existsSync(abs('data/recipes.json'))) errors.push(...validateRecipes(readJson('data/recipes.json'), ctx));
+  if (existsSync(abs('data/sample-week.json'))) {
+    const recipes = existsSync(abs('data/recipes.json')) ? readJson('data/recipes.json').recipes : [];
+    errors.push(...validateSampleWeek(readJson('data/sample-week.json'), { recipes }));
+  }
   if (existsSync(abs('data/hellofresh'))) {
     for (const f of readdirSync(abs('data/hellofresh')).filter((f) => f.endsWith('.json'))) {
       errors.push(...validateHelloFresh(readJson(`data/hellofresh/${f}`)).map((e) => `${f}: ${e}`));

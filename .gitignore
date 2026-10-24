@@ -3,3 +3,4 @@ data/sourcing/snapshots/
 tmp/
 .DS_Store
 *.log
+.venv/

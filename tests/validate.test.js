@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  validatePriceRecords, validateRoundFile, validateStores, validateIngredients, validateRecipes, validateHelloFresh,
+  validatePriceRecords, validateRoundFile, validateStores, validateIngredients, validateRecipes, validateHelloFresh, validateSampleWeek,
 } from '../src/engine/validate.js';
 import { rec } from './fixtures.js';
 
@@ -62,4 +62,14 @@ test('hellofresh docs: box cost model and nullable protein', () => {
   const hf = { id: 'hf-x-1', source: 'hellofresh', cost_model: 'box', servings: 2, nutrition_per_serving: { protein_g: null } };
   assert.deepEqual(validateHelloFresh(hf), []);
   assert.ok(validateHelloFresh({ ...hf, cost_model: 'grocery', nutrition_per_serving: { protein_g: 0 / 0 } }).length >= 2);
+});
+
+test('sample week: 7 dinners, known recipes of the right kind, unpriced list', () => {
+  const recipes = [{ id: 'd1', kind: 'dinner' }, { id: 'b1', kind: 'breakfast' }, { id: 's1', kind: 'snack' }];
+  const days = ['wed', 'thu', 'fri', 'sat'].map((day) => ({ day, recipe_id: 'd1' }));
+  const hf = ['sun', 'mon', 'tue'].map((day) => ({ day, hf_placeholder: { protein_g: 35 } }));
+  const ok = { schemaVersion: 1, dinners: [...days, ...hf], breakfasts: ['b1'], snacks: ['s1'], costing: { unpriced: [] } };
+  assert.deepEqual(validateSampleWeek(ok, { recipes }), []);
+  const errs = validateSampleWeek({ ...ok, dinners: [...days.slice(1), { day: 'thu', recipe_id: 'b1' }], snacks: ['nope'], costing: {} }, { recipes });
+  for (const s of ['two dinners', 'not a dinner', 'needs 7', 'snack nope', 'unpriced']) assert.ok(errs.some((e) => e.includes(s)), s);
 });

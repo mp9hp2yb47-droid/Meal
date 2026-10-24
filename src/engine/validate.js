@@ -162,3 +162,28 @@ export function validateHelloFresh(doc) {
   if (doc.nutrition_per_serving == null || !(p === null || isNum(p))) errors.push(`${at}: nutrition_per_serving.protein_g must be a number or null`);
   return errors;
 }
+
+const DAYS = new Set(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']);
+
+export function validateSampleWeek(doc, { recipes }) {
+  const errors = [];
+  const byId = new Map(recipes.map((r) => [r.id, r]));
+  const kindOk = (id, kind) => byId.get(id)?.kind === kind;
+  if (doc.schemaVersion !== 1) errors.push('sample-week: schemaVersion must be 1');
+  const days = new Set();
+  for (const d of doc.dinners ?? []) {
+    if (!DAYS.has(d.day)) errors.push(`sample-week: bad day ${d.day}`);
+    if (days.has(d.day)) errors.push(`sample-week: two dinners on ${d.day}`);
+    days.add(d.day);
+    if (d.recipe_id != null) {
+      if (!kindOk(d.recipe_id, 'dinner')) errors.push(`sample-week: ${d.day} recipe_id ${d.recipe_id} is not a dinner in recipes.json`);
+    } else if (!isNum(d.hf_placeholder?.protein_g)) {
+      errors.push(`sample-week: ${d.day} needs recipe_id or hf_placeholder.protein_g`);
+    }
+  }
+  if (days.size !== 7) errors.push(`sample-week: needs 7 dinners (one per day), found ${days.size}`);
+  for (const id of doc.breakfasts ?? []) if (!kindOk(id, 'breakfast')) errors.push(`sample-week: breakfast ${id} not in recipes.json`);
+  for (const id of doc.snacks ?? []) if (!kindOk(id, 'snack')) errors.push(`sample-week: snack ${id} not in recipes.json`);
+  if (!Array.isArray(doc.costing?.unpriced)) errors.push('sample-week: costing.unpriced array required (may be empty)');
+  return errors;
+}
